@@ -1082,7 +1082,7 @@ Solução para listas não vazias:
 -- avg_aux [h] = (h,1)
 -- avg_aux (h:t) = (h + media,1+tamanho)
 
-  where (media,tamanho) = avg_aux(t)
+--where (media,tamanho) = avg_aux(t)
 \end{code}
 Solução para árvores de tipo \LTree:
 \begin{code}
