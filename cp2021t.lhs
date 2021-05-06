@@ -1072,11 +1072,17 @@ hyloAlgForm = undefined
 
 Solução para listas não vazias:
 \begin{code}
-avg = p1.avg_aux
+   avg = p1.avg_aux
+-- avg = p1.avg_aux `div` p2.avg_aux
 \end{code}
 
 \begin{code}
-avg_aux = undefined
+   avg_aux = undefined
+-- avg_aux :: (Num a) => [a] -> (a,a)      // not sure if its Num
+-- avg_aux [h] = (h,1)
+-- avg_aux (h:t) = (h + media,1+tamanho)
+
+  where (media,tamanho) = avg_aux(t)
 \end{code}
 Solução para árvores de tipo \LTree:
 \begin{code}
