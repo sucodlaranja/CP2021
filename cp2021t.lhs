@@ -702,7 +702,7 @@ Verifique as suas funções testando a propriedade seguinte:
 A média de uma lista não vazia e de uma \LTree\ com os mesmos elementos coincide,
 a menos de um erro de 0.1 milésimas:
 \begin{code}
-prop_avg :: Ord a => [a] -> Property
+prop_avg :: [Double] -> Property
 prop_avg = nonempty .==>. diff .<=. const 0.000001 where
    diff l = avg l - (avgLTree . genLTree) l
    genLTree = anaLTree lsplit
@@ -1073,19 +1073,30 @@ hyloAlgForm = undefined
 
 Solução para listas não vazias:
 \begin{code}
-avg = p1.avg_aux `div` p2.avg_aux
+avg = p1.avg_aux
 \end{code}
 
-\begin{code}
-avg_aux :: (Num a) => [a] -> (a,a)      
-avg_aux [h] = (h,1)
-avg_aux (h:t) = (h + media,1+tamanho)
- where (media,tamanho) = avg_aux(t)
+\begin{code}    
+avg_aux l = (soma/tamanho,tamanho)
+  where (soma,tamanho) = catamutua l
+ 
+catamutua [h] = (h,1)
+catamutua (h:t) = (h+soma,1+tamanho)
+  where (soma,tamanho) = catamutua(t)
 \end{code}
 Solução para árvores de tipo \LTree:
 \begin{code}
 avgLTree = p1.cataLTree gene where
-   gene = undefined
+   gene l = undefined
+     
+    
+
+   catamutuaLTree (Leaf a) = (a,1) 
+   catamutuaLTree (Fork (e,d)) = (somaE + somaD,tamanhoE + tamanhoD)
+    where (somaE,tamanhoE) = catamutuaLTree(e)
+          (somaD,tamanhoD) = catamutuaLTree(d)
+
+
 \end{code}
 
 \subsection*{Problema 5}
