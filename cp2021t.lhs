@@ -702,7 +702,7 @@ Verifique as suas funções testando a propriedade seguinte:
 A média de uma lista não vazia e de uma \LTree\ com os mesmos elementos coincide,
 a menos de um erro de 0.1 milésimas:
 \begin{code}
-prop_avg :: Ord a => [a] -> Property
+prop_avg :: [Double] -> Property
 prop_avg = nonempty .==>. diff .<=. const 0.000001 where
    diff l = avg l - (avgLTree . genLTree) l
    genLTree = anaLTree lsplit
@@ -1078,12 +1078,13 @@ avg = p1.avg_aux
 
 \begin{code}
     
-avg_aux = (split (media) p2).resultado
+avg_aux = cataList ((split avg length))
     where 
-        resultado = cataList ((soma >< tamanho).(split (recList p1) (recList p2)))
-        soma = either zero add
-        tamanho = either zero (succ.p2)
-        media = uncurry div
+        y = id >< (split (uncurry (*)) (succ.p2))  
+        z = split ((uncurry (+)) . (id >< p1)) (p2 . p2)
+        length = (either (const 0) (succ.p2.p2))
+        avg = (either (const 0) (divisao.z.y))
+        divisao = uncurry (/)
     
 
 \end{code}
