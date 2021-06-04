@@ -1091,7 +1091,12 @@ avg_aux = cataList ((split avg length))
 Solução para árvores de tipo \LTree:
 \begin{code}
 avgLTree = p1.cataLTree gene where
-   gene = undefined
+   gene = (split avg length)
+    where
+        length = either (const 1) ((uncurry (+)) . (p2 >< p2))
+        avg = either (id) (divisao.x)
+        x = split ((uncurry (+)).((uncurry (*)) >< (uncurry (*)))) ((uncurry (+)). (p2 >< p2))
+        divisao = uncurry (/)
 \end{code}
 
 \subsection*{Problema 5}
