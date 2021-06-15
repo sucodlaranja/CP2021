@@ -127,15 +127,15 @@
 
 \begin{center}\large
 \begin{tabular}{ll}
-\textbf{Grupo} nr. & 999 (preencher)
+\textbf{Grupo} nr. & 11
 \\\hline
-a11111 & Nome1 (preencher)	
+a93183 & Jorge Lima
 \\
-a22222 & Nome2 (preencher)	
+a93257 & Ruben Santos	
 \\
-a33333 & Nome3 (preencher)	
+a92945 & José Neiva	
 \\
-a44444 & Nome4 (preencher, se aplicável, ou apagar)	
+a91669 & João Martins
 \end{tabular}
 \end{center}
 
@@ -1016,35 +1016,260 @@ ad :: Floating a => a -> ExpAr a -> a
 ad v = p2 . cataExpAr (ad_gen v)
 \end{code}
 Definir:
+\begin{quote}
+Comentarios:\\
+Como podemos ver a definição do out desta estrutura é como qualquer outro out, é bastante simples.
+
+A definição de recExpAr é a definição do Funtor de ExpAr e nós só que aplicar f a outros ExpAr’s, logo o resto mantemos com id.
+\end{quote}
+\begin{eqnarray*}
+\xymatrix@@C=2cm{
+  |ExpAr A|
+        \ar@@/^/[rr]^-{|outExpAr|}
+&
+ \cong
+&
+  |F ExpAr A|
+       \ar@@/^/[ll]^-{|inExpAr|}
+}
+\end{eqnarray*}
+\begin{quote}
+O gene da função eval exp tem que dar o resultado da expressão em cada um dos cassos, as funções unop e binop encontram quais as operações que queremos aplicar, e depois tendo um par (função, argumentos) basta usar a função ap para aplicar. Nos casos de ser uma variável, que usar o valor que recebemos como argumento, caso seja um número mantemos esse número com o id.
+\end{quote}
+
+\begin{eqnarray*}
+\xymatrix@@1@@=1cm@@C=1.5cm@@R=2cm{
+  |ExpAr A|
+        \ar@@/^/[rr]^-{|outExpAr|}
+        \ar[d]_-{|eval_exp|}
+&
+ \cong
+&
+  |1+(1+(BinOp >< (ExpAr A >< ExpAr A))+(UnOp >< ExpAr A)))|
+       \ar@@/^/[ll]^-{|inExpAr|}
+       \ar[d]^-{|id+id+(id ><(eval_exp >< eval_exp)+ (id >< eval_exp))|}
+\\ 
+  |A|
+&
+.
+&
+  |1+(1+((BinOp >< (A >< A))+(UnOp >< A)))|
+    \ar@@/^0.2pc/[ll]^-{|g.eval_exp|}
+}
+\end{eqnarray*}
+
+\begin{quote}
+No caso do hilomorfismo, temos que ver os casos em que podemos usar a propriedade do elemento absorvente, ou seja nos casos da multiplicação em que um dos membros é N 0. Podemos ignorar o resto da expressão, de resto mantem-se igual. O catamorfismo é o cálculo da expressão otimizada usando a mesma função que em cima usamos
+\end{quote}
+
+\begin{eqnarray*}
+\xymatrix@@C=4cm{
+  |ExpAr A|
+        \ar[d]_-{|[(clean)]|}
+        \ar@@/^0.2pc/[rr]^-{|clean|}
+&
+.
+&
+  |F ExpAr A|
+        \ar[d]^-{F |[(clean)]|}
+\\
+  |ExpAr A| 
+        \ar@@/^/[rr]^-{|outExpAr|}
+        \ar[d]_-{|cata (gopt)|}
+&
+ \cong
+&
+  |F ExpAr A|
+       \ar@@/^/[ll]^-{|inExpAr|}
+       \ar[d]^-{F |cata (gopt)|}
+\\
+  |A|
+&
+.
+&
+  |F A|
+      \ar@@/^0.2pc/[ll]^-{|gopt|}
+}
+\end{eqnarray*}
 
 \begin{code}
-outExpAr = undefined 
+
+outExpAr :: ExpAr a -> Either () (Either a (Either (BinOp, (ExpAr a, ExpAr a)) (UnOp, ExpAr a)))
+outExpAr X = i1 ()
+outExpAr (N a) = (i2 . i1) a
+outExpAr (Bin op a b) = (i2 . i2 . i1) (op,(a,b))
+outExpAr (Un u a) = (i2 . i2 . i2) (u,a)
 ---
-recExpAr = undefined
+recExpAr f = (baseExpAr id id id f f id f)
 ---
-g_eval_exp = undefined
+binop :: (Num a) => BinOp -> ((a, a) -> a)
+binop Sum = uncurry (+)
+binop Product = uncurry (*)
+
+unop :: (Floating a) => UnOp -> (a -> a)
+unop Negate = negate
+unop E = Prelude.exp
+
+g_eval_exp a = either (const a) (either id (either bin un)) where
+  un = Cp.ap . (unop >< id)
+  bin = Cp.ap . (binop >< id)
 ---
-clean = undefined
+clean :: (Floating a, Eq a) => ExpAr a -> Either () (Either a (Either (BinOp, (ExpAr a, ExpAr a)) (UnOp, ExpAr a)))
+clean (Bin Product (N 0) _) = (i2 . i1) 0
+clean (Bin Product _ (N 0)) = (i2 . i1) 0
+clean a = outExpAr a
 ---
-gopt = undefined 
+gopt a = g_eval_exp a
 \end{code}
+\begin{quote}
+Neste gene temos que manter sempre um par, o do direito como contem o resultado é a derivada e o da esquerda é o normal, assim sendo do lado esquerdo do split temos a função normal que vai manter a expressão como está , no caso da deriv usamos os dois conteúdos do par para calcular a derivada da expressão pelas regras da derivação.
+\end{quote}
+
+\begin{eqnarray*}
+\xymatrix@@1@@=1cm@@C=1.5cm@@R=2cm{
+      |ExpAr|
+           \ar@@/^/[rr]^-{|outExpAr|} 
+           \ar[d]_-{|cata (sd_gen)|}    
+           \ar@@/_5pc/[dd]_-{|sd|} 
+&
+      \cong
+&
+      |1+(1+(BinOp,(ExpAr,ExpAr))+(UnOpExpAr)))|
+           \ar[d]^-{|id+(id+((id,((|sd_gen|),(|sd_gen|))+(id,(|sd_gen|)))|}
+           \ar@@/^/[ll]^-{|inExpAr|}
+\\
+      |(ExpAr,ExpAr)|
+      \ar[d]_-{|p2|}
+&
+ .
+&
+      |B|
+             \ar@@/^0.2pc/[ll]^-{|sd_gen|}  
+\\
+ |A|  
+}
+\end{eqnarray*}
+\\
+B= 1+(1+((BinOp,((ExpAr,ExpAr),(ExpAr,ExpAr)))+(UnOp, (ExpAr,ExpAr))))  
+\\
 
 \begin{code}
+derivUn :: (UnOp, (ExpAr a,ExpAr a)) -> ExpAr a
+derivUn (Negate,(a,b)) = (Un Negate b)
+derivUn (E,(a,b)) = Bin Product (Un E a) b
+
+derivBin :: (BinOp, ((ExpAr a, ExpAr a), (ExpAr a, ExpAr a))) -> ExpAr a
+derivBin (Sum, ((_,d1),(_,d2))) = Bin Sum d1 d2
+derivBin (Product, ((e1,d1),(e2,d2))) = Bin Sum p1 p2 where
+    p1 = Bin Product e1 d2
+    p2 = Bin Product d1 e2
+
 sd_gen :: Floating a =>
-    Either () (Either a (Either (BinOp, ((ExpAr a, ExpAr a), (ExpAr a, ExpAr a))) (UnOp, (ExpAr a, ExpAr a)))) -> (ExpAr a, ExpAr a)
-sd_gen = undefined
+    Either () (Either a (Either (BinOp, ((ExpAr a, ExpAr a), (ExpAr a, ExpAr a))) (UnOp, (ExpAr a, ExpAr a)))) 
+    -> (ExpAr a, ExpAr a)
+sd_gen = split normal deriv where
+    normal = either (const X) (either nat (either bin un))
+    nat a = (N a)
+    un (a, (e,d)) = (Un a e)
+    bin (a, ((e1,d1),(e2,d2))) = (Bin a e1 e2)
+    deriv = either cone (either czero (either derivBin derivUn))
+    cone = const (N 1)
+    czero = const (N 0)
 \end{code}
+\begin{quote}
+Este gene tem uma ideologia semelhante ao anterior em que no par do lado esquerdo calculamos o resultado normalmente, e do lado direito calculamos o resultado da derivada através das fórmulas da derivação.
+\end{quote}
+\begin{eqnarray*}
+\xymatrix@@1@@=1cm@@C=1.5cm@@R=2cm{
+      |ExpAr A|
+           \ar@@/^/[rr]^-{|outExpAr|} 
+           \ar[d]_-{|cata (ad_gen)|}    
+           \ar@@/_5pc/[dd]_-{|ad|} 
+&
+      \cong
+&
+      |1+(1+(BinOp,(ExpAr,ExpAr))+(UnOpExpAr)))|
+           \ar[d]^-{|id+(id+((id,((|ad_gen|),(|ad_gen|))+(id,(|ad_gen|)))|}
+           \ar@@/^/[ll]^-{|inExpAr|}
+\\
+      |A >< A|
+      \ar[d]_-{|p2|}
+&
+ .
+&
+      |B|
+             \ar@@/^0.2pc/[ll]^-{|ad_gen|}  
+\\
+ |A|  
+}
+\end{eqnarray*}
+
+B= 1+(1+((BinOp,((ExpAr A,ExpAr A),(ExpAr A,ExpAr A)))+(UnOp, (ExpAr A,ExpAr A))))  
 
 \begin{code}
-ad_gen = undefined
+ad_gen v = split normal deriv where
+  normal = either (const v) (either id (either h j))
+  j = Cp.ap . (unop >< p1)
+  h = Cp.ap . (binop >< (p1 >< p1))
+  deriv = either (const 1) (either (const 0) (either bin un))
+  un (E,(p,d)) = Prelude.exp(p) * d
+  un (Negate,(_,d)) = negate d   
+  bin(Sum,((_,d1),(_,d2))) = d1 + d2 
+  bin(Product,((e1,d1),(e2,d2))) = e1*d2 + e2*d1 
 \end{code}
 
 \subsection*{Problema 2}
 Definir
+Comentarios:\\
+\begin{equation}
+Cn = \frac{(2n)!}{(n+1)!(n!)}
+\end{equation}
+\begin{equation}
+C{n+1} = \frac{(2(n+1))!}{((n+1)+1)!((n+1)!)} 
+= \frac{(2n+2)!}{(n+2)!(n+1)!} 
+= \frac{(2n+2)(2n+1)(2n)!}{(n+2)(n+1)!(n+1)(n!)} 
+= \frac{2(n+1)(2n+1)(2n)!}{(n+2)(n+1)!(n+1)(n!)} =
+\end{equation}
+\begin{equation}
+= \frac{2(2n+1)(2n)!}{(n+2)(n+1)!(n!)} 
+= \frac{2(2n+1)}{(n+2)} * \frac{(2n)!}{(n+1)!(n!)}
+= \frac{4n+2)}{n+2} * Cn
+\end{equation}
+No caso do inic temos o par (1,0), como casos de base da função cat e da função cont, respetivamente.
+Neste catamorfismo, tomamos partido da definição de \begin{equation} C{n+1} \end{equation}  definida acima.
+A cada iteração estamos a calcular \begin{equation} \frac{4n+2}{n+2} \end{equation} e a multiplicar pelo resultado de \begin{equation} C_n \end{equation}
+(calculado previamente e guardado no primeiro elemento do par).
+O valor de n é mantido no segundo elemento do par e é atualizado pela função succ.
+\begin{eqnarray*}
+\xymatrix@@C=4cm{
+      \mathbb{N}
+           \ar@@/^/[rr]^-{|out|} 
+           \ar[d]_-{|cat|}    
+&
+      \cong
+&
+      1 + \mathbb{N}
+           \ar[d]^-{id + cat}
+          \ar@@/^/[ll]^-{|inNat|}
+\\
+      \mathbb{N} 
+&
+ .
+&
+      1 + \mathbb{N}
+             \ar@@/^0.2pc/[ll]^-{|g|}      
+}
+\end{eqnarray*}
+
 \begin{code}
-loop = undefined
-inic = undefined
-prj = undefined
+loop = split (udiv . split (umul .(id >< ((+2) . (*4)))) ((+2) . p2)) cont 
+        where
+        cont = succ . p2
+        umul = uncurry (*)
+        udiv = uncurry div
+
+inic = (1,0)
+prj = p1
 \end{code}
 por forma a que
 \begin{code}
@@ -1055,29 +1280,121 @@ seja a função pretendida.
 Apresentar de seguida a justificação da solução encontrada.
 
 \subsection*{Problema 3}
+\begin{quote}
+No gene da função calcLine queremos que no caso vazio entrega a lista vazia, no outro faz a interpolação entre as coordenadas dos pontos, no fim gerando o Overtime Npoint.
+\end{quote}
+
+\begin{eqnarray*}
+\xymatrix@@C=4cm{
+      |NPoint|
+           \ar@@/^/[rr]^-{|out|} 
+           \ar[d]_-{|calcLine|}    
+&
+      \cong
+&
+      |1 + Rational >< NPoint |
+           \ar[d]^-{id + id \times calcLine}
+           \ar@@/^/[ll]^-{|inNat|}
+\\
+      |OverTime NPoint| 
+&
+ .
+&
+      |1 + Rational >< (OverTime NPoint)|
+             \ar@@/^0.2pc/[ll]^-{|g|}      
+}
+\end{eqnarray*}
+
+\begin{quote}
+A hilomorfismo da função deCasteljau vai a partir da Lista de Pontos e vai criar uma LTree com um par de Npoints que queremos usar para calcular a interpolação, para fazer isto enviamos a cauda da lista para um lado do Fork e o init para o outro lado. Assim para calcular o catamorfismo basta nas Leaf’s calcular a interpolação entre os dois pontos e nos Forks “juntar“os dois Overtime’s NPoint’s aplicando sempre a função calcLine.
+
+\end{quote}
+
+\begin{eqnarray*}
+\xymatrix@@C=3cm{
+  |(NPoint)|^*
+        \ar[d]_-{|[(coalg)]|}
+        \ar@@/^0.2pc/[rr]^-{|coalg|}
+&
+.
+&
+  |F (NPoint)|^*
+        \ar[d]^-{|F [(coalg)]|}
+\\
+  |LTree (NPoint,NPoint)|
+        \ar@@/^/[rr]^-{|outLTree|}
+        \ar[d]_-{|cata (alg)|}
+&
+ \cong
+&
+  |F LTree (NPoint,NPoint)|
+       \ar[d]^-{F |cata(alg)|}
+      \ar@@/^/[ll]^-{|inLTree|}
+\\
+  |OverTime NPoint|
+&
+.
+&
+  |F OverTime NPoint|
+      \ar@@/^0.2pc/[ll]^-{|alg|}
+}
+\end{eqnarray*}
 
 \begin{code}
 calcLine :: NPoint -> (NPoint -> OverTime NPoint)
-calcLine = cataList h where
-   h = undefined
+calcLine = cataList gene where
+  gene = either empt calc
+  empt t = const nil
+  calc (c,r) (p:rs) t = concat((sequenceA [singl . linear1d c p, r rs]) t)
+  calc _ _ t = nil t
 
 deCasteljau :: [NPoint] -> OverTime NPoint
 deCasteljau = hyloAlgForm alg coalg where
-   coalg = undefined
-   alg = undefined
+  coalg [] = i1 ([],[])
+  coalg (h:[]) = i1 (h,[])
+  coalg (h:s:[]) = i1 (h,s)
+  coalg l = i2 (init l,tail l)
+  alg = either (uncurry calcLine) x
+  x (e,d) t = (calcLine (e t) (d t)) t  
 
-hyloAlgForm = undefined
+hyloAlgForm = hyloLTree
 \end{code}
 
 \subsection*{Problema 4}
-
 Solução para listas não vazias:
+\begin{quote}
+O z.y vai me fornecer um par que me vai permitir executar uma divisao que ira resultar na media atual.
+\end{quote}
+\begin{eqnarray*}
+\xymatrix@@1@@=2cm@@C=3cm{
+      |A|^*
+           \ar@@/^/[rr]^-{|out|} 
+           \ar[d]_-{|avg_aux|}  
+           \ar@@/_5pc/[dd]_-{|avg|}   
+&
+      \cong
+&
+      |1 + A >< A|^*
+           \ar[d]^-{id + id \times avg}
+           \ar@@/^/[ll]^-{|inNat|}
+\\
+      |A >< Nat0|
+      \ar[d]_-{|p1|}    
+&
+ .
+&
+      |1 + A >< A|
+             \ar@@/^0.2pc/[ll]^-{|gene|} 
+\\
+     |A|     
+}
+\end{eqnarray*}
+
 \begin{code}
 avg = p1.avg_aux
 \end{code}
 
 \begin{code}
-    
 avg_aux = cataList ((split avg length))
     where 
         y = id >< (split (uncurry (*)) (succ.p2))  
@@ -1085,10 +1402,37 @@ avg_aux = cataList ((split avg length))
         length = (either (const 0) (succ.p2.p2))
         avg = (either (const 0) (divisao.z.y))
         divisao = uncurry (/)
-    
-
 \end{code}
 Solução para árvores de tipo \LTree:
+\begin{quote}
+Usamos o x para calcular um par de maneira semelhante ao z.y na funcao anterior adaptado para LTree.
+\end{quote}
+
+\begin{eqnarray*}
+\xymatrix@@1@@=2cm@@C=3cm{
+      |LTree|
+           \ar@@/^/[rr]^-{|out|} 
+           \ar[d]_-{|cata (gene)|}    
+           \ar@@/_5pc/[dd]_-{|avgLTree|} 
+&
+      \cong
+&
+      |A + (LTree)|^2
+           \ar[d]^-{|id + cata (gene)|^2}
+           \ar@@/^0.2pc/[ll]^-{|inNat|}
+\\
+      |(A,Nat0)|
+      \ar[d]_-{|p1|}
+&
+ .
+&
+      |A+A|^2
+             \ar@@/^0.2pc/[ll]^-{|gene|}  
+\\
+ |A|    
+}
+\end{eqnarray*}
+
 \begin{code}
 avgLTree = p1.cataLTree gene where
    gene = (split avg length)
